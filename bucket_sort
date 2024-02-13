@@ -1,0 +1,60 @@
+import numpy as np
+from dataclasses import dataclass
+from PIL import Image
+from math import log
+from time import time
+import matplotlib.cm
+import matplotlib.pyplot as plt
+from mpi4py import MPI
+import math
+import random
+
+
+def CreerTableau(longueur_tableau, borne_sup):
+    tableau = []
+    for i in range(longueur_tableau):
+        tableau.append(random.randint(0, borne_sup))
+    return tableau
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+num_processes = comm.Get_size()
+longueur_tableau = 30
+borne_sup = 10
+tache = math.ceil(longueur_tableau/num_processes)
+buckets = []
+sorted_bucket = []
+sorted_buckets = []
+for i in range(longueur_tableau):
+        buckets.append([])
+
+if rank == 0:
+
+    tableau = CreerTableau(longueur_tableau, borne_sup)
+    print("tableau initial:",tableau)
+
+    for i in range(longueur_tableau):
+        buckets[int((tableau[i]/borne_sup)*(longueur_tableau-1))].append(tableau[i])
+    #print(buckets)
+
+    for i in range(1, num_processes):
+         comm.send(tableau, dest=i)
+         comm.send(buckets, dest=i)
+
+if rank !=0:
+    tableau = comm.recv(source=0)
+    buckets = comm.recv(source=0)
+
+for i in range(rank*tache, (rank+1)*tache):
+    #print(i)
+    sorted_bucket = sorted(buckets[i])
+    #print("bucket trié:",sorted_bucket, rank)
+    sorted_buckets.extend(sorted_bucket)
+#print(sorted_buckets)
+
+result = comm.gather(sorted_buckets, root=0)
+
+if rank == 0:
+    print("tableau trié par bucket sort:",result)
+
+MPI.Finalize()
