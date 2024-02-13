@@ -1,0 +1,47 @@
+from math import pi, sin, cos
+import numpy as np
+import time
+from mpi4py import MPI
+from time import time
+import math
+
+n = 5 #matrices carrées
+A = np.empty((n,n),float)
+B = np.empty((n,n),float)
+C = np.zeros((n,n),float)
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+num_processes = comm.Get_size()
+
+
+#Création de deux matrices:
+if rank == 0: 
+    for i in range(n):
+        for j in range(n):
+            A[i,j]=i+j
+            B[j,i]=i-j
+
+debut=time()
+
+size_bloc_lignes = math.ceil(n/num_processes)
+
+for i in range(rank*size_bloc_lignes, size_bloc_lignes*(i+1)):
+    if i<5:
+        for j in range(n):
+            for k in range(n):
+                C[i,j] = C[i,j] + A[i,k] + B[k,j]
+
+fin=time()
+print("temps d'execution:",fin-debut)
+
+
+resultat = comm.gather(C, root=0)
+
+if rank==0:
+    print(resultat)
+
+
+MPI.Finalize()
+
+
